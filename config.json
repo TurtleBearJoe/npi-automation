@@ -1,0 +1,74 @@
+{
+    "column_mappings": {
+        "first_name": [
+            "first_name",
+            "first name",
+            "firstname",
+            "first",
+            "First Name",
+            "FirstName",
+            "firstName",
+            "First"
+        ],
+        "last_name": [
+            "last_name",
+            "last name",
+            "lastname",
+            "last",
+            "Last Name",
+            "LastName",
+            "lastName",
+            "Last"
+        ],
+        "city": [
+            "city",
+            "City",
+            "town",
+            "Town",
+            "municipality",
+            "Municipality"
+        ],
+        "state": [
+            "state",
+            "State",
+            "st",
+            "ST",
+            "province",
+            "Province",
+            "state_code",
+            "StateCode"
+        ],
+        "institution_name": [
+            "institution_name",
+            "institution",
+            "organization_name",
+            "organization",
+            "facility_name",
+            "facility",
+            "hospital_name",
+            "hospital",
+            "practice_name",
+            "practice",
+            "clinic_name",
+            "clinic",
+            "center_name",
+            "center",
+            "org_name",
+            "org",
+            "Institution Name",
+            "Institution",
+            "Organization Name",
+            "Organization",
+            "Facility Name",
+            "Facility",
+            "Hospital Name",
+            "Hospital",
+            "Practice Name",
+            "Practice"
+        ]
+    },
+    "required_fields": {
+        "individual": ["last_name"],
+        "institution": ["institution_name"]
+    }
+}
