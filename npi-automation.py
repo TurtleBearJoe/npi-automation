@@ -261,7 +261,11 @@ class NPILookup:
 
         for strategy in search_strategies:
             # Check if we have all required fields for this strategy
-            if not all(provider_data.get(field) for field in strategy['required_fields']):
+            # Treat empty strings and NaN values as missing
+            if not all(
+                provider_data.get(field) and not pd.isna(provider_data.get(field))
+                for field in strategy['required_fields']
+            ):
                 continue
 
             # Remove None or empty values from params
