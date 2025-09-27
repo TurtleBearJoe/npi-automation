@@ -1,52 +1,50 @@
-# NPI Automation
+# NPI Automation Tool
 
-This project enriches provider data with National Provider Identifier (NPI) information using the public NPI Registry API.
+This tool enriches provider data with National Provider Identifier (NPI) information using a simple web interface. It is powered by Streamlit and queries the public NPI Registry API.
 
 ## Requirements
 
 - **Python 3.8+**
-- Python packages: `pandas`, `requests`
+- Python packages: `pandas`, `requests`, `streamlit`
 
-Install dependencies with:
+## How to Run the Application
 
-```bash
-pip install pandas requests
-```
+1.  **Install Dependencies**:
+    First, make sure you have all the necessary packages installed. Open your terminal or command prompt and run the following command from the project's root directory:
 
-## Preparing Data
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-1. Place your CSV files inside the `input/` directory (create it if it does not exist).
-2. Each row should contain provider details. Column names can vary; `config.json` maps common alternatives to the names the script expects.
-3. At minimum, the following columns are required:
-   - For **individuals**: `last_name`
-   - For **institutions**: `institution_name`
+2.  **Launch the Application**:
+    Once the dependencies are installed, you can start the Streamlit application with this command:
 
-Columns such as `first_name`, `city` and `state` improve search accuracy and may appear under many different headings (e.g. `First Name`, `organization`, `facility_name`). See `config.json` for the full list of recognised names.
+    ```bash
+    streamlit run app.py
+    ```
 
-## Running the Script
+    Your web browser should automatically open a new tab with the application running.
 
-From the repository directory run:
+## Using the Tool
 
-```bash
-python npi-automation.py
-```
+1.  **Upload Your Data**:
+    Click the "Upload your CSV file" button and select the CSV file containing your provider data. The application will show you a preview of the first few rows.
 
-The script will:
+2.  **Map Your Columns**:
+    From the dropdown menus, select the columns in your file that correspond to the search fields. You can map fields for:
+    -   Provider Last Name
+    -   Provider First Name
+    -   Institution Name
+    -   City
+    -   State
 
-1. Create `input/` and `output/` folders if they do not exist.
-2. List available CSV files in `input/` and prompt you to choose one.
-3. Map your column names according to `config.json` and detect whether the data contains individual or institutional providers.
-4. Query the NPI Registry using several search strategies until matches are found.
-5. Write a results CSV to the `output/` folder. The filename will include a timestamp (e.g. `mydata_npi_20240101_120000.csv`).
-6. Log any errors to `<output_file>_errors.log` and track progress in `<output_file>_progress.json` so the script can resume if interrupted.
+    *Note: You must map at least one field to proceed. For best results, provide as much information as possible.*
 
-## Output
+3.  **Process and Download**:
+    -   Click the "Process File" button to begin the NPI lookup. A progress bar will show the status of the search.
+    -   Once processing is complete, the results will be displayed on the screen.
+    -   Click the "Download Results as CSV" button to save the enriched data to your computer.
 
-The output CSV includes the original input fields, the NPI number, basic provider information and address details for the first matched location. Endpoint specific fields are included when available.
+## How It Works
 
-## Tips
-
-- Ensure your input CSV uses UTF‑8 encoding.
-- If no matches are found, check the error log for details.
-- The script requires internet access to contact the NPI Registry API.
-
+The application processes your CSV file row by row, sending queries to the NPI Registry API based on the information you've provided. It uses a series of search strategies to find the most accurate matches and returns a new CSV file that includes the original data from your file, plus the NPI number and other details retrieved from the registry.
