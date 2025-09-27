@@ -48,3 +48,29 @@ This tool enriches provider data with National Provider Identifier (NPI) informa
 ## How It Works
 
 The application processes your CSV file row by row, sending queries to the NPI Registry API based on the information you've provided. It uses a series of search strategies to find the most accurate matches and returns a new CSV file that includes the original data from your file, plus the NPI number and other details retrieved from the registry.
+
+---
+
+## Standalone Desktop Application
+
+For convenience, you can build a standalone executable version of the application. This allows you to run the tool as a desktop app without using the command line.
+
+### How to Build and Run the Executable
+
+1.  **Build the Application**:
+    First, ensure you have installed all the dependencies, including `pyinstaller`, by running:
+    ```bash
+    pip install -r requirements.txt
+    ```
+    Then, run the following command from the project's root directory to build the executable:
+    ```bash
+    pyinstaller --name "npi_automation_tool" --onefile --windowed --add-data "app.py:." --add-data "npi_utils.py:." run_app.py
+    ```
+
+2.  **Find the Executable**:
+    After the build process is complete, navigate to the `dist/` folder that has been created in your project directory.
+
+3.  **Run the Application**:
+    Inside the `dist/` folder, you will find a file named `npi_automation_tool` (or `npi_automation_tool.exe` on Windows). Double-click this file to launch the application. It may take a few moments to start up.
+
+The same user interface will open in a new window, ready for you to use.
