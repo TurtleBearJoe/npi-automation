@@ -4,8 +4,6 @@ This tool enriches provider data with National Provider Identifier (NPI) informa
 
 **Data Source:** [CMS National Plan and Provider Enumeration System (NPPES) NPI Registry](https://npiregistry.cms.hhs.gov/)
 
-**Developed by:** [Joe Klimovitsky](https://www.linkedin.com/in/joeklimovitsky/)
-
 ## Requirements
 
 - **Python 3.8+**
