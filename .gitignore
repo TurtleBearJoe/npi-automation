@@ -2,6 +2,7 @@
 /dist/
 /build/
 *.spec
+build.log
 
 # Python
 __pycache__/
@@ -12,3 +13,12 @@ __pycache__/
 # IDE / Editor
 .vscode/
 .idea/
+.claude/
+
+# Build scripts (not needed for Streamlit Cloud)
+build_exe.bat
+build_lightweight.bat
+BUILD_INSTRUCTIONS.md
+launcher.bat
+lightweight_launcher.py
+run_app.py

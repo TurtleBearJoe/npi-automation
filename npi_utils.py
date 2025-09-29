@@ -171,10 +171,10 @@ class NPILookup:
                     'state': provider_data.get('state')
                 },
                 'verify': lambda m, p: (
-                    m['basic'].get('first_name', '').upper() == p['first_name'].upper() and
-                    m['basic'].get('last_name', '').upper() == p['last_name'].upper() and
-                    any(a.get('city', '').upper() == p['city'].upper() and
-                        a.get('state', '').upper() == p['state'].upper()
+                    m['basic'].get('first_name', '').upper() == str(p.get('first_name', '')).upper() and
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    any(a.get('city', '').upper() == str(p.get('city', '')).upper() and
+                        a.get('state', '').upper() == str(p.get('state', '')).upper()
                         for a in m['addresses'])
                 )
             },
@@ -187,9 +187,9 @@ class NPILookup:
                     'state': provider_data.get('state')
                 },
                 'verify': lambda m, p: (
-                    m['basic'].get('first_name', '').upper() == p['first_name'].upper() and
-                    m['basic'].get('last_name', '').upper() == p['last_name'].upper() and
-                    any(a.get('state', '').upper() == p['state'].upper()
+                    m['basic'].get('first_name', '').upper() == str(p.get('first_name', '')).upper() and
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    any(a.get('state', '').upper() == str(p.get('state', '')).upper()
                         for a in m['addresses'])
                 )
             },
@@ -202,9 +202,9 @@ class NPILookup:
                     'state': provider_data.get('state')
                 },
                 'verify': lambda m, p: (
-                    m['basic'].get('last_name', '').upper() == p['last_name'].upper() and
-                    any(a.get('city', '').upper() == p['city'].upper() and
-                        a.get('state', '').upper() == p['state'].upper()
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    any(a.get('city', '').upper() == str(p.get('city', '')).upper() and
+                        a.get('state', '').upper() == str(p.get('state', '')).upper()
                         for a in m['addresses'])
                 )
             },
@@ -216,12 +216,12 @@ class NPILookup:
                     'state': provider_data.get('state')
                 },
                 'verify': lambda m, p: (
-                    m['basic'].get('last_name', '').upper() == p['last_name'].upper() and
-                    any(a.get('state', '').upper() == p['state'].upper()
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    any(a.get('state', '').upper() == str(p.get('state', '')).upper()
                         for a in m['addresses'])
                 )
             },
-            # Strategy 5: First name and last name only, then verify locations in full record
+            # Strategy 5: First name and last name with location verification
             {
                 'required_fields': ['first_name', 'last_name'],
                 'params': {
@@ -230,14 +230,15 @@ class NPILookup:
                 },
                 'verify': lambda m, p: (
                     # First verify name match
-                    m['basic'].get('first_name', '').upper() == p['first_name'].upper() and
-                    m['basic'].get('last_name', '').upper() == p['last_name'].upper() and
-                    # Then check all possible locations for city+state or state match
+                    m['basic'].get('first_name', '').upper() == str(p.get('first_name', '')).upper() and
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    # Only verify location if city or state was provided (check for valid non-NaN values)
                     (
-                        # Check for city + state match in any address type
-                        (p.get('city') and any(
-                            a.get('city', '').upper() == p['city'].upper() and
-                            a.get('state', '').upper() == p['state'].upper()
+                        # If city+state provided (both valid non-NaN), check for match
+                        ((p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and
+                         (p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()) and any(
+                            a.get('city', '').upper() == str(p.get('city', '')).upper() and
+                            a.get('state', '').upper() == str(p.get('state', '')).upper()
                             for a in (
                                 m.get('addresses', []) +
                                 m.get('practiceLocations', []) +
@@ -245,36 +246,98 @@ class NPILookup:
                             )
                         ))
                         or
-                        # If no city+state match, check for state match only
-                        (p.get('state') and any(
-                            a.get('state', '').upper() == p['state'].upper()
+                        # If only state provided (valid non-NaN), check for state match
+                        ((p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()) and
+                         not (p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and any(
+                            a.get('state', '').upper() == str(p.get('state', '')).upper()
                             for a in (
                                 m.get('addresses', []) +
                                 m.get('practiceLocations', []) +
                                 m.get('endpoints', [])
                             )
                         ))
+                        or
+                        # If no location info provided (both are NaN/empty), accept name match only
+                        (not (p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and
+                         not (p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()))
                     )
                 )
+            },
+            # Strategy 6: Last name only (broadest search - limited to 10 results)
+            {
+                'required_fields': ['last_name'],
+                'params': {
+                    'last_name': provider_data.get('last_name')
+                },
+                'verify': lambda m, p: (
+                    # Verify last name match
+                    m['basic'].get('last_name', '').upper() == str(p.get('last_name', '')).upper() and
+                    # If first name provided (valid non-NaN), verify it matches
+                    (not (p.get('first_name') and not pd.isna(p.get('first_name')) and str(p.get('first_name')).strip()) or
+                     m['basic'].get('first_name', '').upper() == str(p.get('first_name', '')).upper()) and
+                    # Verify location if provided (check for valid non-NaN values)
+                    (
+                        # If city+state provided (both valid non-NaN), check for match
+                        ((p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and
+                         (p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()) and any(
+                            a.get('city', '').upper() == str(p.get('city', '')).upper() and
+                            a.get('state', '').upper() == str(p.get('state', '')).upper()
+                            for a in (
+                                m.get('addresses', []) +
+                                m.get('practiceLocations', []) +
+                                m.get('endpoints', [])
+                            )
+                        ))
+                        or
+                        # If only state provided (valid non-NaN), check for state match
+                        ((p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()) and
+                         not (p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and any(
+                            a.get('state', '').upper() == str(p.get('state', '')).upper()
+                            for a in (
+                                m.get('addresses', []) +
+                                m.get('practiceLocations', []) +
+                                m.get('endpoints', [])
+                            )
+                        ))
+                        or
+                        # If no location info provided (both are NaN/empty), accept name match only
+                        (not (p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and
+                         not (p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()))
+                    )
+                ),
+                'limit': 10  # Limit to first 10 results for last name only searches
             }
         ]
 
-        for strategy in search_strategies:
+        for strategy_idx, strategy in enumerate(search_strategies, 1):
             # Check if we have all required fields for this strategy
-            # Treat empty strings and NaN values as missing
-            if not all(
-                provider_data.get(field) and not pd.isna(provider_data.get(field))
+            # Treat empty strings, NaN values, and whitespace-only strings as missing
+            has_required = all(
+                provider_data.get(field) and
+                not pd.isna(provider_data.get(field)) and
+                str(provider_data.get(field)).strip() != ''
                 for field in strategy['required_fields']
-            ):
+            )
+
+            print(f"  Strategy {strategy_idx}: Required fields {strategy['required_fields']}, Has all: {has_required}")
+
+            if not has_required:
                 continue
 
-            # Remove None or empty values from params
-            search_params = {k: v for k, v in strategy['params'].items() if v}
+            # Remove None, empty, or whitespace-only values from params
+            search_params = {
+                k: v for k, v in strategy['params'].items()
+                if v and not pd.isna(v) and str(v).strip() != ''
+            }
 
+            print(f"    Searching with params: {search_params}")
             matches = self.search_npi(**search_params)
+            print(f"    API returned {len(matches)} raw matches")
 
             # Process matches
             strategy_matches = []
+            match_limit = strategy.get('limit', None)  # Get limit if specified
+
             for match in matches:
                 npi = match['number']
 
@@ -286,10 +349,17 @@ class NPILookup:
                         **match
                     })
 
+                    # Check if we've reached the limit for this strategy
+                    if match_limit and len(strategy_matches) >= match_limit:
+                        break
+
             # If this strategy found any matches, use only these matches and stop searching
             if strategy_matches:
+                print(f"    [SUCCESS] Strategy {strategy_idx} found {len(strategy_matches)} verified matches. Stopping search.")
                 all_matches.extend(strategy_matches)
                 break
+            else:
+                print(f"    [FAIL] No verified matches for this strategy")
 
             # Add small delay between searches
             time.sleep(0.1)
@@ -339,7 +409,6 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
 
     npi_lookup = NPILookup()
     all_results = []
-    seen_npis = set()
     total_rows = len(df)
 
     for idx, row in df.iterrows():
@@ -360,14 +429,21 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
             if 'state' in df.columns:
                 provider_data['state'] = row.get('state', '')
 
+        print(f"\n=== Row {idx + 1} ===")
+        print(f"Provider Data: {provider_data}")
+
         matches = npi_lookup.search_with_multiple_combinations(provider_data)
 
+        print(f"Number of matches found: {len(matches)}")
+
         if matches:
+            # Track NPIs per row to avoid duplicates within the same person's results
+            seen_npis_this_row = set()
             for match in matches:
-                if match['number'] in seen_npis:
+                if match['number'] in seen_npis_this_row:
                     continue
 
-                seen_npis.add(match['number'])
+                seen_npis_this_row.add(match['number'])
                 addresses_to_process = (
                     [(addr, 'main') for addr in match['addresses']] +
                     [(loc, 'practice') for loc in match.get('practiceLocations', [])] +
@@ -377,23 +453,21 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
                 if addresses_to_process:
                     addr, addr_type = addresses_to_process[0]
 
+                    # Build result with consistent column order
                     result = {}
-                    # Add original row data to result
-                    for col in df.columns:
-                        result[f"input_{col}"] = row[col]
 
                     if provider_type == 'institution':
-                        result.update({
-                            'search_criteria_used': match['search_criteria'],
+                        # Institution output order
+                        result = {
+                            'organization_name': match['basic'].get('organization_name', ''),
                             'npi': match['number'],
-                            'address_type': addr_type,
                             'address': addr.get('address_1', ''),
+                            'address_2': addr.get('address_2', ''),
                             'city': addr.get('city', ''),
                             'state': addr.get('state', ''),
                             'zip': addr.get('postal_code', ''),
                             'phone': addr.get('telephone_number', ''),
                             'fax': addr.get('fax_number', ''),
-                            'organization_name': match['basic'].get('organization_name', ''),
                             'organizational_subpart': match['basic'].get('organizational_subpart', ''),
                             'authorized_official_first_name': match['basic'].get('authorized_official_first_name', ''),
                             'authorized_official_last_name': match['basic'].get('authorized_official_last_name', ''),
@@ -401,29 +475,40 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
                             'status': match['basic'].get('status', ''),
                             'taxonomy_desc': match['taxonomies'][0].get('desc', '') if match.get('taxonomies') else '',
                             'taxonomy_group': match['taxonomies'][0].get('taxonomy_group', '') if match.get('taxonomies') else '',
-                        })
-                    else: # Individual
-                        result.update({
-                            'search_criteria_used': match['search_criteria'],
-                            'npi': match['number'],
                             'address_type': addr_type,
+                            'search_criteria_used': match['search_criteria'],
+                        }
+                    else: # Individual
+                        # Individual output order - First Name, Last Name, NPI, Address, City, State, ZIP, etc.
+                        result = {
+                            'first_name': match['basic'].get('first_name', ''),
+                            'last_name': match['basic'].get('last_name', ''),
+                            'npi': match['number'],
                             'address': addr.get('address_1', ''),
+                            'address_2': addr.get('address_2', ''),
                             'city': addr.get('city', ''),
                             'state': addr.get('state', ''),
                             'zip': addr.get('postal_code', ''),
                             'phone': addr.get('telephone_number', ''),
                             'fax': addr.get('fax_number', ''),
-                            'first_name': match['basic'].get('first_name', ''),
-                            'last_name': match['basic'].get('last_name', ''),
                             'middle_name': match['basic'].get('middle_name', ''),
-                            'sole_proprietor': match['basic'].get('sole_proprietor', ''),
-                            'gender': match['basic'].get('gender', ''),
-                            'status': match['basic'].get('status', ''),
                             'name_prefix': match['basic'].get('name_prefix', ''),
                             'name_suffix': match['basic'].get('name_suffix', ''),
+                            'credential': match['basic'].get('credential', ''),
+                            'gender': match['basic'].get('gender', ''),
+                            'sole_proprietor': match['basic'].get('sole_proprietor', ''),
+                            'status': match['basic'].get('status', ''),
                             'taxonomy_desc': match['taxonomies'][0].get('desc', '') if match.get('taxonomies') else '',
                             'taxonomy_group': match['taxonomies'][0].get('taxonomy_group', '') if match.get('taxonomies') else '',
-                        })
+                            'license_number': match['taxonomies'][0].get('license', '') if match.get('taxonomies') else '',
+                            'license_state': match['taxonomies'][0].get('state', '') if match.get('taxonomies') else '',
+                            'address_type': addr_type,
+                            'search_criteria_used': match['search_criteria'],
+                        }
+
+                    # Add original input data at the end with 'input_' prefix
+                    for col in df.columns:
+                        result[f"input_{col}"] = row[col]
 
                     if addr_type == 'endpoint':
                         result.update({
