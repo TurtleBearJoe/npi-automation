@@ -30,6 +30,9 @@ st.info("""
 **Data Source:** This tool searches the [CMS National Plan and Provider Enumeration System (NPPES) NPI Registry](https://npiregistry.cms.hhs.gov/),
 a publicly available database maintained by the Centers for Medicare & Medicaid Services (CMS).
 All data is retrieved using the official [NPI Registry API](https://npiregistry.cms.hhs.gov/api-page).
+
+**Privacy:** Your uploaded files are processed entirely in your browser session and are never stored on any server.
+All data remains on your device.
 """)
 
 st.divider()
