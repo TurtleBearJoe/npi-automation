@@ -19,6 +19,13 @@ This tool helps you find National Provider Identifier (NPI) numbers for healthca
 Upload a CSV file with provider information, map the columns, and get back a file enriched with NPI data.
 """)
 
+# Attribution
+st.markdown("""
+<small>
+Developed by <a href="https://www.linkedin.com/in/joeklimovitsky/" target="_blank">Joe Klimovitsky</a>
+</small>
+""", unsafe_allow_html=True)
+
 st.info("""
 **Data Source:** This tool searches the [CMS National Plan and Provider Enumeration System (NPPES) NPI Registry](https://npiregistry.cms.hhs.gov/),
 a publicly available database maintained by the Centers for Medicare & Medicaid Services (CMS).
