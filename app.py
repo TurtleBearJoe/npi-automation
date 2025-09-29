@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from npi_utils import process_dataframe
+from config import auto_detect_columns, validate_required_fields, COLUMN_MAPPINGS
 import io
 
 # --- Streamlit App Configuration ---
@@ -18,6 +19,21 @@ This tool helps you find National Provider Identifier (NPI) numbers for healthca
 Upload a CSV file with provider information, map the columns, and get back a file enriched with NPI data.
 """)
 
+# Attribution and transparency
+st.markdown("""
+<small>
+Developed by <a href="https://www.linkedin.com/in/joeklimovitsky/" target="_blank">Joe Klimovitsky</a>
+</small>
+""", unsafe_allow_html=True)
+
+st.info("""
+**Data Source:** This tool searches the [CMS National Plan and Provider Enumeration System (NPPES) NPI Registry](https://npiregistry.cms.hhs.gov/),
+a publicly available database maintained by the Centers for Medicare & Medicaid Services (CMS).
+All data is retrieved using the official [NPI Registry API](https://npiregistry.cms.hhs.gov/api-page).
+""")
+
+st.divider()
+
 # --- File Uploader ---
 uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
@@ -31,24 +47,45 @@ if uploaded_file is not None:
         st.write("### Preview of your data:")
         st.dataframe(df.head())
 
+        # --- Auto-detect columns ---
+        detected_columns = auto_detect_columns(df.columns.tolist())
+        is_valid, missing_fields = validate_required_fields(detected_columns)
+
+        # Show detection results
+        if detected_columns:
+            st.success(f"Auto-detected {len(detected_columns)} column(s)")
+            for standard_field, actual_column in detected_columns.items():
+                st.write(f"  - **{standard_field}**: `{actual_column}`")
+
+        if not is_valid:
+            st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
+
         # --- Column Mapping ---
         st.write("### Map your columns")
-        st.write("Select the columns from your file that correspond to the required fields.")
+        st.write("Auto-detected columns are pre-selected. You can change them or map additional fields manually.")
 
-        # Define the fields required for the NPI search
-        required_mappings = {
-            "last_name": "Provider Last Name",
+        # Define the fields for the NPI search
+        field_labels = {
+            "last_name": "Provider Last Name (REQUIRED)",
             "first_name": "Provider First Name (optional)",
-            "institution_name": "Institution Name",
+            "institution_name": "Institution Name (optional)",
             "city": "City (optional)",
-            "state": "State (optional, but recommended)"
+            "state": "State (optional)",
+            "zip": "ZIP Code (optional)"
         }
 
         column_options = ["-"] + list(df.columns)
         user_mappings = {}
 
-        for key, label in required_mappings.items():
-            user_mappings[key] = st.selectbox(label, options=column_options, index=0)
+        for key, label in field_labels.items():
+            # Find the index of the auto-detected column, or default to 0 ("-")
+            default_index = 0
+            if key in detected_columns:
+                detected_col = detected_columns[key]
+                if detected_col in column_options:
+                    default_index = column_options.index(detected_col)
+
+            user_mappings[key] = st.selectbox(label, options=column_options, index=default_index)
 
         # --- Processing Logic ---
         if st.button("Process File"):
@@ -62,8 +99,9 @@ if uploaded_file is not None:
                         mapped_df[key] = df[selected_col]
                         final_mappings[key] = selected_col
 
-                if not final_mappings:
-                    st.error("You must map at least one column to proceed.")
+                # Check for required field (last_name)
+                if 'last_name' not in final_mappings:
+                    st.error("You must map the 'Last Name' field to proceed. It is required.")
                 else:
                     with st.spinner("Searching the NPI registry... This may take a few moments."):
                         # Progress bar
@@ -75,9 +113,9 @@ if uploaded_file is not None:
                         # Process the dataframe
                         results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress)
 
-                        st.success("Processing complete!")
+                        st.success(f"Processing complete! Found {len(results_df)} total matches.")
                         st.write("### Results")
-                        st.dataframe(results_df)
+                        st.dataframe(results_df, use_container_width=True, height=600)
 
                         # --- Download Button ---
                         @st.cache_data
