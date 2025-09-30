@@ -31,9 +31,26 @@ with col_help:
 
 st.caption("Developed by [Joe Klimovitsky](https://www.linkedin.com/in/joeklimovitsky/)")
 
-# Initialize session state for taxonomy preferences
+# Initialize session state for taxonomy preferences and state filters
 if 'saved_taxonomies' not in st.session_state:
     st.session_state.saved_taxonomies = []
+if 'state_filters' not in st.session_state:
+    st.session_state.state_filters = []
+
+# US States mapping: Full name to abbreviation
+US_STATES = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+    "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    "District of Columbia": "DC", "Puerto Rico": "PR"
+}
 
 # --- File Uploader ---
 uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
@@ -174,6 +191,32 @@ if uploaded_file is not None:
                         key="download_tax_csv"
                     )
 
+        # --- State Filter Section ---
+        with st.expander("🗺️ Filter by State (Optional)", expanded=False):
+            st.caption("Filter results to show only providers from selected states")
+
+            # Multi-select for states
+            selected_states = st.multiselect(
+                "Select States",
+                options=sorted(US_STATES.keys()),
+                default=st.session_state.state_filters,
+                key="state_multiselect"
+            )
+
+            # Update session state
+            st.session_state.state_filters = selected_states
+
+            if st.session_state.state_filters:
+                st.write(f"**Active State Filters** ({len(st.session_state.state_filters)} states):")
+                state_cols = st.columns(4)
+                for idx, state in enumerate(st.session_state.state_filters):
+                    with state_cols[idx % 4]:
+                        st.caption(f"• {state} ({US_STATES[state]})")
+
+                if st.button("🗑️ Clear All States", key="clear_states"):
+                    st.session_state.state_filters = []
+                    st.rerun()
+
         # --- Processing Logic ---
         if st.button("Process File"):
             # Create a new dataframe with standardized column names
@@ -197,9 +240,11 @@ if uploaded_file is not None:
                         def update_progress(fraction):
                             progress_bar.progress(fraction)
 
-                        # Process the dataframe with taxonomy filter
+                        # Process the dataframe with taxonomy and state filters
                         taxonomy_filter = st.session_state.saved_taxonomies if st.session_state.saved_taxonomies else None
-                        results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress, taxonomy_filter=taxonomy_filter)
+                        # Convert state names to abbreviations for filtering
+                        state_filter = [US_STATES[state] for state in st.session_state.state_filters] if st.session_state.state_filters else None
+                        results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress, taxonomy_filter=taxonomy_filter, state_filter=state_filter)
 
                         st.success(f"Processing complete! Found {len(results_df)} total matches.")
                         st.write("### Results")

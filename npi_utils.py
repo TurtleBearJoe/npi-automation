@@ -425,7 +425,7 @@ def detect_provider_type(df: pd.DataFrame) -> str:
     # Default to individual if we can't determine
     return 'individual'
 
-def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback=None, taxonomy_filter=None):
+def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback=None, taxonomy_filter=None, state_filter=None):
     """
     Process a DataFrame to find NPI matches.
     This is a modified version of the original process_csv function.
@@ -435,6 +435,7 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
         column_mappings: Mapping of column names
         progress_callback: Callback function for progress updates
         taxonomy_filter: List of taxonomy descriptions to filter by (optional)
+        state_filter: List of state abbreviations to filter by (optional)
     """
     provider_type = detect_provider_type(df)
     text_cleaner = TextCleaner()
@@ -489,6 +490,22 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
                         break  # Only add once even if multiple taxonomies match
             matches = filtered_matches
             print(f"After taxonomy filter: {len(matches)} matches")
+
+        # Filter by state if specified
+        if state_filter and matches:
+            filtered_matches = []
+            for match in matches:
+                # Check all addresses (main, practice locations, endpoints)
+                addresses = (
+                    match.get('addresses', []) +
+                    match.get('practiceLocations', []) +
+                    match.get('endpoints', [])
+                )
+                # Include if any address matches the state filter
+                if any(addr.get('state', '').upper() in [s.upper() for s in state_filter] for addr in addresses):
+                    filtered_matches.append(match)
+            matches = filtered_matches
+            print(f"After state filter: {len(matches)} matches")
 
         if matches:
             # Track NPIs per row to avoid duplicates within the same person's results
