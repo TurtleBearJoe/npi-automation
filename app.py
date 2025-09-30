@@ -86,85 +86,119 @@ with st.expander("📋 How to Use This Tool", expanded=False):
 
 st.divider()
 
-# --- File Uploader ---
-uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
+# --- Search Mode Toggle ---
+search_mode = st.radio(
+    "Select Search Mode:",
+    ["Manual Search", "Bulk Upload (CSV)"],
+    horizontal=True
+)
 
-if uploaded_file is not None:
-    try:
-        # Read the uploaded CSV file
-        df = pd.read_csv(uploaded_file)
-        st.success("File uploaded successfully!")
+st.divider()
 
-        # Display a preview of the uploaded data
-        st.write("### Preview of your data:")
-        st.dataframe(df.head())
+if search_mode == "Manual Search":
+    # --- Manual Search Form ---
+    st.write("### Manual NPI Search")
+    st.write("Enter provider information to search for NPI numbers. You can add multiple providers.")
 
-        # --- Auto-detect columns ---
-        detected_columns = auto_detect_columns(df.columns.tolist())
-        is_valid, missing_fields = validate_required_fields(detected_columns)
+    # Initialize session state for manual entries
+    if 'manual_entries' not in st.session_state:
+        st.session_state.manual_entries = [{}]
 
-        # Show detection results
-        if detected_columns:
-            st.success(f"Auto-detected {len(detected_columns)} column(s)")
-            for standard_field, actual_column in detected_columns.items():
-                st.write(f"  - **{standard_field}**: `{actual_column}`")
+    # Add entry button
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("➕ Add Another Provider"):
+            st.session_state.manual_entries.append({})
+    with col2:
+        if len(st.session_state.manual_entries) > 1:
+            if st.button("🗑️ Remove Last Entry"):
+                st.session_state.manual_entries.pop()
 
-        if not is_valid:
-            st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
+    # Display entry forms
+    manual_data = []
+    for idx, entry in enumerate(st.session_state.manual_entries):
+        with st.expander(f"Provider #{idx + 1}", expanded=True):
+            col1, col2 = st.columns(2)
 
-        # --- Column Mapping ---
-        st.write("### Map your columns")
-        st.write("Auto-detected columns are pre-selected. You can change them or map additional fields manually.")
+            with col1:
+                last_name = st.text_input(
+                    "Last Name (REQUIRED)",
+                    value=entry.get('last_name', ''),
+                    key=f"last_name_{idx}"
+                )
+                first_name = st.text_input(
+                    "First Name (optional)",
+                    value=entry.get('first_name', ''),
+                    key=f"first_name_{idx}"
+                )
+                institution_name = st.text_input(
+                    "Institution Name (optional)",
+                    value=entry.get('institution_name', ''),
+                    key=f"institution_name_{idx}"
+                )
 
-        # Define the fields for the NPI search
-        field_labels = {
-            "last_name": "Provider Last Name (REQUIRED)",
-            "first_name": "Provider First Name (optional)",
-            "institution_name": "Institution Name (optional)",
-            "city": "City (optional)",
-            "state": "State (optional)",
-            "zip": "ZIP Code (optional)"
-        }
+            with col2:
+                city = st.text_input(
+                    "City (optional)",
+                    value=entry.get('city', ''),
+                    key=f"city_{idx}"
+                )
+                state = st.text_input(
+                    "State (optional)",
+                    value=entry.get('state', ''),
+                    key=f"state_{idx}",
+                    placeholder="e.g., CA, NY, TX"
+                )
+                zip_code = st.text_input(
+                    "ZIP Code (optional)",
+                    value=entry.get('zip', ''),
+                    key=f"zip_{idx}",
+                    placeholder="5-digit ZIP"
+                )
 
-        column_options = ["-"] + list(df.columns)
-        user_mappings = {}
+            # Store the data
+            entry_data = {
+                'last_name': last_name,
+                'first_name': first_name,
+                'institution_name': institution_name,
+                'city': city,
+                'state': state,
+                'zip': zip_code
+            }
+            manual_data.append(entry_data)
 
-        for key, label in field_labels.items():
-            # Find the index of the auto-detected column, or default to 0 ("-")
-            default_index = 0
-            if key in detected_columns:
-                detected_col = detected_columns[key]
-                if detected_col in column_options:
-                    default_index = column_options.index(detected_col)
+    # Search button for manual entries
+    if st.button("🔍 Search NPI Registry", type="primary"):
+        # Validate that at least one entry has required data
+        valid_entries = [
+            entry for entry in manual_data
+            if entry.get('last_name') or entry.get('institution_name')
+        ]
 
-            user_mappings[key] = st.selectbox(label, options=column_options, index=default_index)
+        if not valid_entries:
+            st.error("Please provide at least a Last Name or Institution Name for one provider.")
+        else:
+            # Create DataFrame from manual entries
+            manual_df = pd.DataFrame(valid_entries)
 
-        # --- Processing Logic ---
-        if st.button("Process File"):
-            # Create a new dataframe with standardized column names
+            # Remove empty string values (replace with None)
+            manual_df = manual_df.replace('', None)
+
+            # Create mappings (identity mapping since columns already match)
+            manual_mappings = {col: col for col in manual_df.columns if col in manual_df.columns}
+
             try:
-                mapped_df = pd.DataFrame()
-                final_mappings = {}
+                with st.spinner("Searching the NPI registry... This may take a few moments."):
+                    # Progress bar
+                    progress_bar = st.progress(0)
 
-                for key, selected_col in user_mappings.items():
-                    if selected_col != "-":
-                        mapped_df[key] = df[selected_col]
-                        final_mappings[key] = selected_col
+                    def update_progress(fraction):
+                        progress_bar.progress(fraction)
 
-                # Check for required field (last_name)
-                if 'last_name' not in final_mappings:
-                    st.error("You must map the 'Last Name' field to proceed. It is required.")
-                else:
-                    with st.spinner("Searching the NPI registry... This may take a few moments."):
-                        # Progress bar
-                        progress_bar = st.progress(0)
+                    # Process the dataframe
+                    results_df = process_dataframe(manual_df, manual_mappings, progress_callback=update_progress)
 
-                        def update_progress(fraction):
-                            progress_bar.progress(fraction)
-
-                        # Process the dataframe
-                        results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress)
-
+                    if len(results_df) > 0:
                         st.success(f"Processing complete! Found {len(results_df)} total matches.")
                         st.write("### Results")
                         st.dataframe(results_df, use_container_width=True, height=600)
@@ -172,7 +206,6 @@ if uploaded_file is not None:
                         # --- Download Button ---
                         @st.cache_data
                         def convert_df_to_csv(df_to_convert):
-                            # IMPORTANT: Cache the conversion to prevent computation on every rerun
                             return df_to_convert.to_csv(index=False).encode('utf-8')
 
                         csv_output = convert_df_to_csv(results_df)
@@ -183,10 +216,114 @@ if uploaded_file is not None:
                             file_name="npi_results.csv",
                             mime="text/csv",
                         )
+                    else:
+                        st.warning("No matches found for the provided information. Try adjusting your search criteria.")
+
             except Exception as e:
                 st.error(f"An error occurred during processing: {e}")
 
-    except Exception as e:
-        st.error(f"Error reading or processing file: {e}")
-else:
-    st.info("Please upload a CSV file to begin.")
+else:  # Bulk Upload (CSV) mode
+    # --- File Uploader ---
+    uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
+
+    if uploaded_file is not None:
+        try:
+            # Read the uploaded CSV file
+            df = pd.read_csv(uploaded_file)
+            st.success("File uploaded successfully!")
+
+            # Display a preview of the uploaded data
+            st.write("### Preview of your data:")
+            st.dataframe(df.head())
+
+            # --- Auto-detect columns ---
+            detected_columns = auto_detect_columns(df.columns.tolist())
+            is_valid, missing_fields = validate_required_fields(detected_columns)
+
+            # Show detection results
+            if detected_columns:
+                st.success(f"Auto-detected {len(detected_columns)} column(s)")
+                for standard_field, actual_column in detected_columns.items():
+                    st.write(f"  - **{standard_field}**: `{actual_column}`")
+
+            if not is_valid:
+                st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
+
+            # --- Column Mapping ---
+            st.write("### Map your columns")
+            st.write("Auto-detected columns are pre-selected. You can change them or map additional fields manually.")
+
+            # Define the fields for the NPI search
+            field_labels = {
+                "last_name": "Provider Last Name (REQUIRED)",
+                "first_name": "Provider First Name (optional)",
+                "institution_name": "Institution Name (optional)",
+                "city": "City (optional)",
+                "state": "State (optional)",
+                "zip": "ZIP Code (optional)"
+            }
+
+            column_options = ["-"] + list(df.columns)
+            user_mappings = {}
+
+            for key, label in field_labels.items():
+                # Find the index of the auto-detected column, or default to 0 ("-")
+                default_index = 0
+                if key in detected_columns:
+                    detected_col = detected_columns[key]
+                    if detected_col in column_options:
+                        default_index = column_options.index(detected_col)
+
+                user_mappings[key] = st.selectbox(label, options=column_options, index=default_index)
+
+            # --- Processing Logic ---
+            if st.button("Process File"):
+                # Create a new dataframe with standardized column names
+                try:
+                    mapped_df = pd.DataFrame()
+                    final_mappings = {}
+
+                    for key, selected_col in user_mappings.items():
+                        if selected_col != "-":
+                            mapped_df[key] = df[selected_col]
+                            final_mappings[key] = selected_col
+
+                    # Check for required field (last_name)
+                    if 'last_name' not in final_mappings:
+                        st.error("You must map the 'Last Name' field to proceed. It is required.")
+                    else:
+                        with st.spinner("Searching the NPI registry... This may take a few moments."):
+                            # Progress bar
+                            progress_bar = st.progress(0)
+
+                            def update_progress(fraction):
+                                progress_bar.progress(fraction)
+
+                            # Process the dataframe
+                            results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress)
+
+                            st.success(f"Processing complete! Found {len(results_df)} total matches.")
+                            st.write("### Results")
+                            st.dataframe(results_df, use_container_width=True, height=600)
+
+                            # --- Download Button ---
+                            @st.cache_data
+                            def convert_df_to_csv(df_to_convert):
+                                # IMPORTANT: Cache the conversion to prevent computation on every rerun
+                                return df_to_convert.to_csv(index=False).encode('utf-8')
+
+                            csv_output = convert_df_to_csv(results_df)
+
+                            st.download_button(
+                                label="Download Results as CSV",
+                                data=csv_output,
+                                file_name="npi_results.csv",
+                                mime="text/csv",
+                            )
+                except Exception as e:
+                    st.error(f"An error occurred during processing: {e}")
+
+        except Exception as e:
+            st.error(f"Error reading or processing file: {e}")
+    else:
+        st.info("Please upload a CSV file to begin.")
