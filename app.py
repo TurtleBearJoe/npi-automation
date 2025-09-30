@@ -199,7 +199,7 @@ if uploaded_file is not None:
             selected_states = st.multiselect(
                 "Select States",
                 options=sorted(US_STATES.keys()),
-                default=st.session_state.state_filters,
+                default=st.session_state.get('state_filters', []),
                 key="state_multiselect"
             )
 
@@ -243,7 +243,7 @@ if uploaded_file is not None:
                         # Process the dataframe with taxonomy and state filters
                         taxonomy_filter = st.session_state.saved_taxonomies if st.session_state.saved_taxonomies else None
                         # Convert state names to abbreviations for filtering
-                        state_filter = [US_STATES[state] for state in st.session_state.state_filters] if st.session_state.state_filters else None
+                        state_filter = [US_STATES[state] for state in st.session_state.get('state_filters', [])] if st.session_state.get('state_filters', []) else None
                         results_df = process_dataframe(mapped_df, final_mappings, progress_callback=update_progress, taxonomy_filter=taxonomy_filter, state_filter=state_filter)
 
                         st.success(f"Processing complete! Found {len(results_df)} total matches.")
