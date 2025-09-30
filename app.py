@@ -37,6 +37,55 @@ All data remains on your device.
 
 st.divider()
 
+# --- Instructions ---
+with st.expander("📋 How to Use This Tool", expanded=False):
+    st.markdown("""
+    ### Step 1: Prepare Your CSV File
+    Your CSV file should contain provider information with at least one of the following columns:
+
+    **For Individual Providers:**
+    - **Last Name** (REQUIRED) - Provider's last name
+    - **First Name** (optional) - Provider's first name
+    - **City** (optional) - City where provider practices
+    - **State** (optional) - State abbreviation (e.g., CA, NY, TX)
+    - **ZIP Code** (optional) - 5-digit ZIP code
+
+    **For Organizations/Facilities:**
+    - **Institution Name** (REQUIRED) - Name of the facility or organization
+    - **State** (optional) - State abbreviation
+    - **City** (optional) - City location
+
+    ### Step 2: Column Name Flexibility
+    The tool automatically detects column names. You can use any of these variations (case-insensitive):
+
+    **Last Name:** `last`, `lastname`, `last_name`, `surname`, `family name`, `lname`
+
+    **First Name:** `first`, `firstname`, `first_name`, `given name`, `fname`
+
+    **Institution:** `institution`, `facility`, `organization`, `hospital`, `clinic`, `practice` (with or without `_name`)
+
+    **City:** `city`, `municipality`, `town`
+
+    **State:** `state`, `st`, `province`
+
+    **ZIP Code:** `zip`, `zipcode`, `postal`, `postalcode`
+
+    ### Step 3: Upload and Process
+    1. Upload your CSV file
+    2. The tool will auto-detect your columns
+    3. Verify or adjust the column mappings
+    4. Click "Process File" to search the NPI registry
+    5. Download the results with NPI numbers and additional provider information
+
+    ### Tips for Best Results
+    - **More information = better matches**: Include first name, city, and state when available
+    - **Last name only works**: The tool will find matches even with minimal information
+    - **Missing data is OK**: Leave cells empty if you don't have that information
+    - **Broad searches are limited**: Last-name-only searches return a maximum of 10 results per provider
+    """)
+
+st.divider()
+
 # --- File Uploader ---
 uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
