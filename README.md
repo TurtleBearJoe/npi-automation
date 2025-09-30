@@ -2,6 +2,8 @@
 
 This tool enriches provider data with National Provider Identifier (NPI) information using a simple web interface. It is powered by Streamlit and queries the public CMS NPPES NPI Registry API.
 
+**Live App:** [https://npi-automation.streamlit.app/](https://npi-automation.streamlit.app/)
+
 **Data Source:** [CMS National Plan and Provider Enumeration System (NPPES) NPI Registry](https://npiregistry.cms.hhs.gov/)
 
 ## Requirements
