@@ -140,82 +140,81 @@ if uploaded_file is not None:
                     key=f"map_{key}"
                 )
 
-        # --- Taxonomy Filter Section ---
-        with st.expander("🏥 Filter by Taxonomy Keywords (Optional)", expanded=False):
-            st.caption("Enter keywords to filter specialties (e.g., 'surgery', 'ortho', 'neuro')")
+        # --- Filters Section ---
+        with st.expander("🔍 Filters (Optional)", expanded=False):
+            # State Filter
+            st.markdown("**🗺️ Filter by State**")
+            selected_states = st.multiselect(
+                "Select States",
+                options=sorted(US_STATES.keys()),
+                default=st.session_state.get('state_filters', []),
+                key="state_multiselect",
+                label_visibility="collapsed"
+            )
+            st.session_state.state_filters = selected_states
 
-            col_load, col_manual = st.columns(2)
+            st.divider()
 
-            with col_load:
-                uploaded_tax_csv = st.file_uploader("📁 Load Keywords", type="json", key="tax_upload_csv")
+            # Taxonomy Filter
+            st.markdown("**🏥 Filter by Taxonomy Keywords**")
+            col_upload, col_input = st.columns([1, 2])
+
+            with col_upload:
+                uploaded_tax_csv = st.file_uploader("Load", type="json", key="tax_upload_csv", label_visibility="collapsed")
                 if uploaded_tax_csv:
                     import json
                     tax_data = json.load(uploaded_tax_csv)
                     st.session_state.saved_taxonomies = tax_data.get('taxonomies', [])
-                    st.success(f"Loaded {len(st.session_state.saved_taxonomies)} keywords")
+                    st.success(f"✓ {len(st.session_state.saved_taxonomies)}")
 
-            with col_manual:
-                manual_tax_input_csv = st.text_area(
-                    "✏️ Keywords (one per line)",
-                    height=80,
-                    placeholder="surgery\northo\nneuro\ninternal\ncardio",
-                    key="tax_input_csv"
+            with col_input:
+                manual_tax_input_csv = st.text_input(
+                    "Keywords",
+                    placeholder="surgery, ortho, neuro (comma-separated)",
+                    key="tax_input_csv",
+                    label_visibility="collapsed"
                 )
-                if st.button("Add to Filter", key="add_tax_csv"):
-                    if manual_tax_input_csv:
-                        new_taxes = [t.strip() for t in manual_tax_input_csv.split('\n') if t.strip()]
-                        st.session_state.saved_taxonomies.extend(new_taxes)
-                        st.session_state.saved_taxonomies = list(set(st.session_state.saved_taxonomies))
-                        st.success(f"Added {len(new_taxes)} keywords")
+                if manual_tax_input_csv:
+                    new_taxes = [t.strip() for t in manual_tax_input_csv.split(',') if t.strip()]
+                    st.session_state.saved_taxonomies = list(set(st.session_state.saved_taxonomies + new_taxes))
 
-            if st.session_state.saved_taxonomies:
-                st.write(f"**Active Keywords** ({len(st.session_state.saved_taxonomies)}): Matches any taxonomy containing these terms")
-                tax_cols = st.columns(3)
-                for idx, tax in enumerate(st.session_state.saved_taxonomies):
-                    with tax_cols[idx % 3]:
-                        st.caption(f"• {tax}")
+            # Show active filters compactly
+            if st.session_state.state_filters or st.session_state.saved_taxonomies:
+                st.divider()
+                st.markdown("**Active Filters:**")
 
-                col_clear, col_download = st.columns(2)
-                with col_clear:
-                    if st.button("🗑️ Clear All", key="clear_tax_csv"):
+                if st.session_state.state_filters:
+                    state_list = ", ".join([f"{s} ({US_STATES[s]})" for s in st.session_state.state_filters[:3]])
+                    if len(st.session_state.state_filters) > 3:
+                        state_list += f" +{len(st.session_state.state_filters) - 3} more"
+                    st.caption(f"🗺️ States: {state_list}")
+
+                if st.session_state.saved_taxonomies:
+                    tax_list = ", ".join(st.session_state.saved_taxonomies[:3])
+                    if len(st.session_state.saved_taxonomies) > 3:
+                        tax_list += f" +{len(st.session_state.saved_taxonomies) - 3} more"
+                    st.caption(f"🏥 Keywords: {tax_list}")
+
+                col_clear1, col_clear2, col_download = st.columns(3)
+                with col_clear1:
+                    if st.button("Clear States", key="clear_states", use_container_width=True):
+                        st.session_state.state_filters = []
+                        st.rerun()
+                with col_clear2:
+                    if st.button("Clear Keywords", key="clear_tax", use_container_width=True):
                         st.session_state.saved_taxonomies = []
                         st.rerun()
                 with col_download:
                     import json
                     tax_json = json.dumps({'taxonomies': st.session_state.saved_taxonomies}, indent=2)
                     st.download_button(
-                        "💾 Download Keywords",
+                        "💾 Save",
                         data=tax_json,
                         file_name="taxonomy_keywords.json",
                         mime="application/json",
-                        key="download_tax_csv"
+                        key="download_tax_csv",
+                        use_container_width=True
                     )
-
-        # --- State Filter Section ---
-        with st.expander("🗺️ Filter by State (Optional)", expanded=False):
-            st.caption("Filter results to show only providers from selected states")
-
-            # Multi-select for states
-            selected_states = st.multiselect(
-                "Select States",
-                options=sorted(US_STATES.keys()),
-                default=st.session_state.get('state_filters', []),
-                key="state_multiselect"
-            )
-
-            # Update session state
-            st.session_state.state_filters = selected_states
-
-            if st.session_state.state_filters:
-                st.write(f"**Active State Filters** ({len(st.session_state.state_filters)} states):")
-                state_cols = st.columns(4)
-                for idx, state in enumerate(st.session_state.state_filters):
-                    with state_cols[idx % 4]:
-                        st.caption(f"• {state} ({US_STATES[state]})")
-
-                if st.button("🗑️ Clear All States", key="clear_states"):
-                    st.session_state.state_filters = []
-                    st.rerun()
 
         # --- Processing Logic ---
         if st.button("Process File"):
