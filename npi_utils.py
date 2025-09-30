@@ -73,24 +73,50 @@ class NPILookup:
                 not self.is_us_address(cleaned_params['state'], cleaned_params['postal_code'])):
                 return []
 
-            params = {
-                'version': self.version,
-                'limit': 200,
-                'pretty': True,
-                **cleaned_params
-            }
+            # Get all results using pagination
+            all_results = []
+            skip = 0
+            limit = 200  # API maximum per request
 
-            response = requests.get(self.base_url, params=params)
-            response.raise_for_status()
-            data = response.json()
+            while True:
+                params = {
+                    'version': self.version,
+                    'limit': limit,
+                    'skip': skip,
+                    'pretty': True,
+                    **cleaned_params
+                }
 
-            if not isinstance(data, dict) or 'result_count' not in data:
-                print(f"Warning: Unexpected API response format for parameters {cleaned_params}")
-                return []
+                response = requests.get(self.base_url, params=params)
+                response.raise_for_status()
+                data = response.json()
 
-            if data['result_count'] > 0:
-                return data['results']
-            return []
+                if not isinstance(data, dict) or 'result_count' not in data:
+                    print(f"Warning: Unexpected API response format for parameters {cleaned_params}")
+                    break
+
+                if data['result_count'] == 0:
+                    break
+
+                # Add results from this page
+                if 'results' in data and data['results']:
+                    all_results.extend(data['results'])
+
+                # Check if we've retrieved all results
+                if len(all_results) >= data['result_count']:
+                    break
+
+                # Move to next page
+                skip += limit
+
+                # Safety check: if we got fewer results than limit, we're done
+                if len(data['results']) < limit:
+                    break
+
+                # Small delay to be respectful to the API
+                time.sleep(0.1)
+
+            return all_results
 
         except Exception as e:
             print(f"Warning: Error searching with parameters {cleaned_params}: {str(e)}")
