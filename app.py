@@ -195,11 +195,17 @@ if search_mode == "Manual Search":
 
     # Search button for manual entries
     if st.button("🔍 Search NPI Registry", type="primary"):
-        # Validate that at least one entry has required data
+        # Debug: Show what we're collecting
+        st.write("Debug - Manual data collected:", manual_data)
+
+        # Validate that at least one entry has required data (non-empty strings)
         valid_entries = [
             entry for entry in manual_data
-            if entry.get('last_name') or entry.get('institution_name')
+            if (entry.get('last_name') and entry.get('last_name').strip()) or
+               (entry.get('institution_name') and entry.get('institution_name').strip())
         ]
+
+        st.write("Debug - Valid entries:", valid_entries)
 
         if not valid_entries:
             st.error("Please provide at least a Last Name or Institution Name for one provider.")
@@ -209,6 +215,10 @@ if search_mode == "Manual Search":
 
             # Remove empty string values (replace with None)
             manual_df = manual_df.replace('', None)
+
+            # Also handle the 'zip' column name for consistency
+            if 'zip' in manual_df.columns:
+                manual_df = manual_df.rename(columns={'zip': 'zip'})
 
             # Create mappings (identity mapping since columns already match)
             manual_mappings = {col: col for col in manual_df.columns if col in manual_df.columns}
