@@ -391,10 +391,16 @@ def detect_provider_type(df: pd.DataFrame) -> str:
     # Default to individual if we can't determine
     return 'individual'
 
-def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback=None):
+def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback=None, taxonomy_filter=None):
     """
     Process a DataFrame to find NPI matches.
     This is a modified version of the original process_csv function.
+
+    Args:
+        df: DataFrame with provider data
+        column_mappings: Mapping of column names
+        progress_callback: Callback function for progress updates
+        taxonomy_filter: List of taxonomy descriptions to filter by (optional)
     """
     provider_type = detect_provider_type(df)
 
@@ -435,6 +441,19 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
         matches = npi_lookup.search_with_multiple_combinations(provider_data)
 
         print(f"Number of matches found: {len(matches)}")
+
+        # Filter by taxonomy if specified
+        if taxonomy_filter and matches:
+            filtered_matches = []
+            for match in matches:
+                taxonomies = match.get('taxonomies', [])
+                for tax in taxonomies:
+                    tax_desc = tax.get('desc', '')
+                    if any(filter_tax.lower() in tax_desc.lower() for filter_tax in taxonomy_filter):
+                        filtered_matches.append(match)
+                        break  # Only add once even if multiple taxonomies match
+            matches = filtered_matches
+            print(f"After taxonomy filter: {len(matches)} matches")
 
         if matches:
             # Track NPIs per row to avoid duplicates within the same person's results
