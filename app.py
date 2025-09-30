@@ -100,72 +100,98 @@ if search_mode == "Manual Search":
     st.write("### Manual NPI Search")
     st.write("Enter provider information to search for NPI numbers. You can add multiple providers.")
 
+    # State mapping: full name to abbreviation
+    US_STATES = {
+        "": "",
+        "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+        "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+        "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+        "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+        "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+        "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+        "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+        "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+        "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+        "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+        "District of Columbia": "DC", "Puerto Rico": "PR"
+    }
+
     # Initialize session state for manual entries
     if 'manual_entries' not in st.session_state:
         st.session_state.manual_entries = [{}]
 
     # Add entry button
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button("➕ Add Another Provider"):
-            st.session_state.manual_entries.append({})
-    with col2:
-        if len(st.session_state.manual_entries) > 1:
-            if st.button("🗑️ Remove Last Entry"):
-                st.session_state.manual_entries.pop()
+    if st.button("➕ Add Another Provider"):
+        st.session_state.manual_entries.append({})
 
     # Display entry forms
     manual_data = []
     for idx, entry in enumerate(st.session_state.manual_entries):
-        with st.expander(f"Provider #{idx + 1}", expanded=True):
-            col1, col2 = st.columns(2)
+        # Create header with remove button
+        col_header1, col_header2 = st.columns([4, 1])
+        with col_header1:
+            st.markdown(f"**Provider #{idx + 1}**")
+        with col_header2:
+            if len(st.session_state.manual_entries) > 1:
+                if st.button("🗑️", key=f"remove_{idx}", help="Remove this provider"):
+                    st.session_state.manual_entries.pop(idx)
+                    st.rerun()
 
-            with col1:
-                last_name = st.text_input(
-                    "Last Name (REQUIRED)",
-                    value=entry.get('last_name', ''),
-                    key=f"last_name_{idx}"
-                )
-                first_name = st.text_input(
-                    "First Name (optional)",
-                    value=entry.get('first_name', ''),
-                    key=f"first_name_{idx}"
-                )
-                institution_name = st.text_input(
-                    "Institution Name (optional)",
-                    value=entry.get('institution_name', ''),
-                    key=f"institution_name_{idx}"
-                )
+        # Compact form layout - 3 columns
+        col1, col2, col3 = st.columns(3)
 
-            with col2:
-                city = st.text_input(
-                    "City (optional)",
-                    value=entry.get('city', ''),
-                    key=f"city_{idx}"
-                )
-                state = st.text_input(
-                    "State (optional)",
-                    value=entry.get('state', ''),
-                    key=f"state_{idx}",
-                    placeholder="e.g., CA, NY, TX"
-                )
-                zip_code = st.text_input(
-                    "ZIP Code (optional)",
-                    value=entry.get('zip', ''),
-                    key=f"zip_{idx}",
-                    placeholder="5-digit ZIP"
-                )
+        with col1:
+            last_name = st.text_input(
+                "Last Name*",
+                value=entry.get('last_name', ''),
+                key=f"last_name_{idx}"
+            )
+            city = st.text_input(
+                "City",
+                value=entry.get('city', ''),
+                key=f"city_{idx}"
+            )
 
-            # Store the data
-            entry_data = {
-                'last_name': last_name,
-                'first_name': first_name,
-                'institution_name': institution_name,
-                'city': city,
-                'state': state,
-                'zip': zip_code
-            }
-            manual_data.append(entry_data)
+        with col2:
+            first_name = st.text_input(
+                "First Name",
+                value=entry.get('first_name', ''),
+                key=f"first_name_{idx}"
+            )
+            # State dropdown
+            state_name = st.selectbox(
+                "State",
+                options=list(US_STATES.keys()),
+                index=0,
+                key=f"state_{idx}"
+            )
+            state_code = US_STATES[state_name]
+
+        with col3:
+            institution_name = st.text_input(
+                "Institution Name",
+                value=entry.get('institution_name', ''),
+                key=f"institution_name_{idx}"
+            )
+            zip_code = st.text_input(
+                "ZIP Code",
+                value=entry.get('zip', ''),
+                key=f"zip_{idx}",
+                placeholder="5-digit"
+            )
+
+        st.divider()
+
+        # Store the data with state code
+        entry_data = {
+            'last_name': last_name,
+            'first_name': first_name,
+            'institution_name': institution_name,
+            'city': city,
+            'state': state_code,  # Use state code for API
+            'zip': zip_code
+        }
+        manual_data.append(entry_data)
 
     # Search button for manual entries
     if st.button("🔍 Search NPI Registry", type="primary"):
