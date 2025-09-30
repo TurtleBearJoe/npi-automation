@@ -276,10 +276,18 @@ else:  # Bulk Upload (CSV) mode
             detected_columns = auto_detect_columns(df.columns.tolist())
             is_valid, missing_fields = validate_required_fields(detected_columns)
 
-            # Show detection results - single line summary
+            # Show detection results - single line summary with human-readable names
             if detected_columns:
-                detected_summary = ", ".join([f"{k}→{v}" for k, v in detected_columns.items()])
-                st.success(f"Auto-detected: {detected_summary}")
+                field_name_map = {
+                    "last_name": "Last Name",
+                    "first_name": "First Name",
+                    "institution_name": "Institution Name",
+                    "city": "City",
+                    "state": "State",
+                    "zip": "ZIP Code"
+                }
+                detected_names = [field_name_map.get(k, k) for k in detected_columns.keys()]
+                st.success(f"Auto-detected: {', '.join(detected_names)}")
 
             if not is_valid:
                 st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
