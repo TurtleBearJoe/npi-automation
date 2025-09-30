@@ -33,6 +33,15 @@ class TextCleaner:
         # Take only first 5 digits
         return zip_code[:5]
 
+    @staticmethod
+    def to_proper_case(text: str) -> str:
+        """Convert text to Proper Case (Title Case)"""
+        if pd.isna(text) or not text:
+            return ""
+        text = str(text)
+        # Use title() for proper case
+        return text.title()
+
 class NPILookup:
     def __init__(self):
         self.base_url = "https://npiregistry.cms.hhs.gov/api/"
@@ -428,6 +437,7 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
         taxonomy_filter: List of taxonomy descriptions to filter by (optional)
     """
     provider_type = detect_provider_type(df)
+    text_cleaner = TextCleaner()
 
     required_fields = {
         "individual": ["last_name"],
@@ -503,19 +513,19 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
                     if provider_type == 'institution':
                         # Institution output order
                         result = {
-                            'organization_name': match['basic'].get('organization_name', ''),
+                            'organization_name': text_cleaner.to_proper_case(match['basic'].get('organization_name', '')),
                             'npi': match['number'],
-                            'address': addr.get('address_1', ''),
-                            'address_2': addr.get('address_2', ''),
-                            'city': addr.get('city', ''),
-                            'state': addr.get('state', ''),
+                            'address': text_cleaner.to_proper_case(addr.get('address_1', '')),
+                            'address_2': text_cleaner.to_proper_case(addr.get('address_2', '')),
+                            'city': text_cleaner.to_proper_case(addr.get('city', '')),
+                            'state': addr.get('state', '').upper(),  # Keep state abbreviations uppercase
                             'zip': addr.get('postal_code', ''),
                             'phone': addr.get('telephone_number', ''),
                             'fax': addr.get('fax_number', ''),
                             'organizational_subpart': match['basic'].get('organizational_subpart', ''),
-                            'authorized_official_first_name': match['basic'].get('authorized_official_first_name', ''),
-                            'authorized_official_last_name': match['basic'].get('authorized_official_last_name', ''),
-                            'authorized_official_title': match['basic'].get('authorized_official_title', ''),
+                            'authorized_official_first_name': text_cleaner.to_proper_case(match['basic'].get('authorized_official_first_name', '')),
+                            'authorized_official_last_name': text_cleaner.to_proper_case(match['basic'].get('authorized_official_last_name', '')),
+                            'authorized_official_title': text_cleaner.to_proper_case(match['basic'].get('authorized_official_title', '')),
                             'status': match['basic'].get('status', ''),
                             'taxonomy_desc': match['taxonomies'][0].get('desc', '') if match.get('taxonomies') else '',
                             'taxonomy_group': match['taxonomies'][0].get('taxonomy_group', '') if match.get('taxonomies') else '',
@@ -525,17 +535,17 @@ def process_dataframe(df: pd.DataFrame, column_mappings: Dict, progress_callback
                     else: # Individual
                         # Individual output order - First Name, Last Name, NPI, Address, City, State, ZIP, etc.
                         result = {
-                            'first_name': match['basic'].get('first_name', ''),
-                            'last_name': match['basic'].get('last_name', ''),
+                            'first_name': text_cleaner.to_proper_case(match['basic'].get('first_name', '')),
+                            'last_name': text_cleaner.to_proper_case(match['basic'].get('last_name', '')),
                             'npi': match['number'],
-                            'address': addr.get('address_1', ''),
-                            'address_2': addr.get('address_2', ''),
-                            'city': addr.get('city', ''),
-                            'state': addr.get('state', ''),
+                            'address': text_cleaner.to_proper_case(addr.get('address_1', '')),
+                            'address_2': text_cleaner.to_proper_case(addr.get('address_2', '')),
+                            'city': text_cleaner.to_proper_case(addr.get('city', '')),
+                            'state': addr.get('state', '').upper(),  # Keep state abbreviations uppercase
                             'zip': addr.get('postal_code', ''),
                             'phone': addr.get('telephone_number', ''),
                             'fax': addr.get('fax_number', ''),
-                            'middle_name': match['basic'].get('middle_name', ''),
+                            'middle_name': text_cleaner.to_proper_case(match['basic'].get('middle_name', '')),
                             'name_prefix': match['basic'].get('name_prefix', ''),
                             'name_suffix': match['basic'].get('name_suffix', ''),
                             'credential': match['basic'].get('credential', ''),
