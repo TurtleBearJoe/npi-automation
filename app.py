@@ -286,31 +286,59 @@ else:  # Bulk Upload (CSV) mode
                 st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
 
             # --- Column Mapping ---
-            st.write("### Map your columns")
-            st.write("Auto-detected columns are pre-selected. You can change them or map additional fields manually.")
+            st.write("### Map Your Columns")
 
             # Define the fields for the NPI search
             field_labels = {
-                "last_name": "Provider Last Name (REQUIRED)",
-                "first_name": "Provider First Name (optional)",
-                "institution_name": "Institution Name (optional)",
-                "city": "City (optional)",
-                "state": "State (optional)",
-                "zip": "ZIP Code (optional)"
+                "last_name": "Last Name*",
+                "first_name": "First Name",
+                "institution_name": "Institution",
+                "city": "City",
+                "state": "State",
+                "zip": "ZIP"
             }
 
             column_options = ["-"] + list(df.columns)
             user_mappings = {}
 
-            for key, label in field_labels.items():
-                # Find the index of the auto-detected column, or default to 0 ("-")
-                default_index = 0
-                if key in detected_columns:
-                    detected_col = detected_columns[key]
-                    if detected_col in column_options:
-                        default_index = column_options.index(detected_col)
+            # Compact 3-column layout for mapping
+            col1, col2, col3 = st.columns(3)
 
-                user_mappings[key] = st.selectbox(label, options=column_options, index=default_index)
+            with col1:
+                for key in ["last_name", "first_name"]:
+                    default_index = 0
+                    if key in detected_columns and detected_columns[key] in column_options:
+                        default_index = column_options.index(detected_columns[key])
+                    user_mappings[key] = st.selectbox(
+                        field_labels[key],
+                        options=column_options,
+                        index=default_index,
+                        key=f"map_{key}"
+                    )
+
+            with col2:
+                for key in ["institution_name", "city"]:
+                    default_index = 0
+                    if key in detected_columns and detected_columns[key] in column_options:
+                        default_index = column_options.index(detected_columns[key])
+                    user_mappings[key] = st.selectbox(
+                        field_labels[key],
+                        options=column_options,
+                        index=default_index,
+                        key=f"map_{key}"
+                    )
+
+            with col3:
+                for key in ["state", "zip"]:
+                    default_index = 0
+                    if key in detected_columns and detected_columns[key] in column_options:
+                        default_index = column_options.index(detected_columns[key])
+                    user_mappings[key] = st.selectbox(
+                        field_labels[key],
+                        options=column_options,
+                        index=default_index,
+                        key=f"map_{key}"
+                    )
 
             # --- Processing Logic ---
             if st.button("Process File"):
