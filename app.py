@@ -276,11 +276,10 @@ else:  # Bulk Upload (CSV) mode
             detected_columns = auto_detect_columns(df.columns.tolist())
             is_valid, missing_fields = validate_required_fields(detected_columns)
 
-            # Show detection results
+            # Show detection results - single line summary
             if detected_columns:
-                st.success(f"Auto-detected {len(detected_columns)} column(s)")
-                for standard_field, actual_column in detected_columns.items():
-                    st.write(f"  - **{standard_field}**: `{actual_column}`")
+                detected_summary = ", ".join([f"{k}→{v}" for k, v in detected_columns.items()])
+                st.success(f"Auto-detected: {detected_summary}")
 
             if not is_valid:
                 st.warning(f"Missing required field(s): {', '.join(missing_fields)}")
