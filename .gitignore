@@ -13,16 +13,9 @@ __pycache__/
 # IDE / Editor
 .vscode/
 .idea/
-.claude/
-.specify/
-.cursor/
-.cursorrules
 .*
 !.gitignore
 !.devcontainer/
-
-# Claude Code documentation (local only)
-CLAUDE.md
 
 # Build scripts (not needed for Streamlit Cloud)
 build_exe.bat
