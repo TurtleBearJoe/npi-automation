@@ -289,7 +289,7 @@ class NPILookup:
                     )
                 )
             },
-            # Strategy 6: Last name only (broadest search - limited to 10 results)
+            # Strategy 6: Last name only (broadest search)
             {
                 'required_fields': ['last_name'],
                 'params': {
@@ -330,8 +330,7 @@ class NPILookup:
                         (not (p.get('city') and not pd.isna(p.get('city')) and str(p.get('city')).strip()) and
                          not (p.get('state') and not pd.isna(p.get('state')) and str(p.get('state')).strip()))
                     )
-                ),
-                'limit': 10  # Limit to first 10 results for last name only searches
+                )
             }
         ]
 
