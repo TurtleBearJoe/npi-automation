@@ -84,6 +84,17 @@ if uploaded_file is not None:
     try:
         # Read the uploaded CSV file with encoding detection
         df = read_csv_with_encoding(uploaded_file)
+
+        # Clean up column names - remove or rename None/non-string columns
+        clean_columns = []
+        for i, col in enumerate(df.columns):
+            if col is None or not isinstance(col, str):
+                # Rename problematic columns
+                clean_columns.append(f"Unnamed_{i}")
+            else:
+                clean_columns.append(col)
+        df.columns = clean_columns
+
         st.success("File uploaded successfully!")
 
         # Display a preview of the uploaded data
