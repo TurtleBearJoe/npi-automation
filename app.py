@@ -3,6 +3,49 @@ import pandas as pd
 from npi_utils import process_dataframe
 from config import auto_detect_columns, validate_required_fields, COLUMN_MAPPINGS
 import io
+import chardet
+
+def read_csv_with_encoding(uploaded_file):
+    """
+    Try to read CSV file with multiple encodings.
+    First attempts to detect the encoding, then falls back to common encodings.
+    """
+    # Reset file pointer to beginning
+    uploaded_file.seek(0)
+    raw_data = uploaded_file.read()
+
+    # Try to detect encoding
+    detected = chardet.detect(raw_data)
+    detected_encoding = detected.get('encoding', 'utf-8')
+
+    # List of encodings to try, starting with detected
+    encodings_to_try = [
+        detected_encoding,
+        'utf-8',
+        'latin-1',
+        'iso-8859-1',
+        'windows-1252',
+        'cp1252'
+    ]
+
+    # Remove duplicates while preserving order
+    encodings_to_try = list(dict.fromkeys(encodings_to_try))
+
+    for encoding in encodings_to_try:
+        try:
+            # Reset to beginning and try to read with this encoding
+            df = pd.read_csv(io.BytesIO(raw_data), encoding=encoding)
+            st.info(f"Successfully read file using **{encoding}** encoding")
+            return df
+        except (UnicodeDecodeError, UnicodeError):
+            continue
+        except Exception as e:
+            # If it's not an encoding error, raise it
+            if 'codec' not in str(e).lower() and 'decode' not in str(e).lower():
+                raise
+
+    # If all encodings fail, raise an error
+    raise ValueError(f"Unable to read the CSV file. Tried encodings: {', '.join(encodings_to_try)}")
 
 # --- Streamlit App Configuration ---
 st.set_page_config(
@@ -39,8 +82,8 @@ uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
 if uploaded_file is not None:
     try:
-        # Read the uploaded CSV file
-        df = pd.read_csv(uploaded_file)
+        # Read the uploaded CSV file with encoding detection
+        df = read_csv_with_encoding(uploaded_file)
         st.success("File uploaded successfully!")
 
         # Display a preview of the uploaded data
