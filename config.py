@@ -41,7 +41,8 @@ REQUIRED_FIELDS = ['last_name']
 
 def normalize_column_name(column_name: str) -> str:
     """Normalize column name to lowercase and remove extra spaces/underscores"""
-    if not column_name:
+    # Handle None or non-string types
+    if not isinstance(column_name, str) or not column_name:
         return ""
     # Convert to lowercase, replace underscores/spaces with single space, strip
     normalized = column_name.lower().replace('_', ' ').replace('-', ' ')

@@ -384,6 +384,9 @@ def detect_provider_type(df: pd.DataFrame) -> str:
 
     # Look for any column names that might indicate institutions
     for col in df.columns:
+        # Skip None or non-string column names
+        if not isinstance(col, str):
+            continue
         for indicator in institution_indicators:
             if indicator.lower() in col.lower():
                 return 'institution'
