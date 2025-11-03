@@ -64,7 +64,12 @@ def auto_detect_columns(df_columns: list) -> dict:
     detected = {}
 
     # Normalize all dataframe column names for comparison
-    normalized_df_columns = {normalize_column_name(col): col for col in df_columns}
+    # Skip None or non-string column names
+    normalized_df_columns = {
+        normalize_column_name(col): col
+        for col in df_columns
+        if col is not None and isinstance(col, str)
+    }
 
     # Check each standard field
     for standard_field, variations in COLUMN_MAPPINGS.items():
